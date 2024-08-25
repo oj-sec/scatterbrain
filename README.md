@@ -26,5 +26,5 @@ Scatterbrain is most easily run using docker. With docker installed, from this d
 
 You can alternatively compile the application and serve it directly. Create the Svelte static web application files by running `npm install` and `npm run build` in the `./client` directory (requires npm). Run the fastAPI server by running `pip install -r requirements.txt` and `python3 server.py` in the `./server` directory (requires python3.10+ and pip).
 
-Note that text embedding operations are memory and processor intensive. The web application gives feedback about processing progress to time assessment but you should also ensure you have enough memory to comfortably hold your chosen embedding model, your dataset and more than 2kb per vector created, with some room left over for the web application and dimension reduction model.  
+Note that text embedding operations are memory and processor intensive. The web application gives feedback about processing progress to enable time assessment but you should also ensure you have enough memory to comfortably hold your chosen embedding model, your dataset and more than 2kb per vector created, with some room left over for the web application and dimension reduction model.  
 
