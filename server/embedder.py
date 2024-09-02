@@ -206,6 +206,7 @@ class Embedder:
         logging.info("Embedder generating 2D scatter plot.")
         df = pd.DataFrame(self.map_embeddings, columns=["x", "y"])
         df["text"] = [row[target_field] for row in self.data]
+        df["text"] = df["text"].apply(lambda x: self.__split_text(x))
         fig = go.Figure()
         if category == "" or category is None:
             fig.add_trace(
@@ -242,6 +243,7 @@ class Embedder:
                         text=category_df["text"],
                         name=icategory,
                         hoverinfo="text",
+                        hovertemplate="<b>%{text}</b><extra></extra>",
                     )
                 )
         return fig
@@ -253,6 +255,7 @@ class Embedder:
         logging.info("Embedder generating 3D scatter plot.")
         df = pd.DataFrame(self.map_embeddings, columns=["x", "y", "z"])
         df["text"] = [row[target_field] for row in self.data]
+        df["text"] = df["text"].apply(lambda x: self.__split_text(x))
         fig = go.Figure()
         if category == "" or category is None:
             fig.add_trace(
@@ -291,9 +294,35 @@ class Embedder:
                         text=category_df["text"],
                         name=icategory,
                         hoverinfo="text",
+                        hovertemplate="<b>%{text}</b><extra></extra>",
                     )
                 )
         return fig
+
+    def __split_text(self, text, max_length=100):
+        """
+        Method to split a text into chunks of a given maximum length.
+        """
+        words = text.split()
+        split_words = []
+        for word in words:
+            if len(word) > max_length:
+                divisor = len(word) // max_length
+                for i in range(divisor + 1):
+                    split_words.append(word[i * max_length : (i + 1) * max_length])
+            else:
+                split_words.append(word)
+        lines = []
+        buffer = ""
+        for word in split_words:
+            if len(buffer) + len(word) > max_length:
+                lines.append(buffer)
+                buffer = word
+            else:
+                buffer += " " + word
+        lines.append(buffer)
+        lines = [line.strip() for line in lines]
+        return "<br>".join(lines)
 
     def __get_hex_colour(self, seaborn_colour):
         """
