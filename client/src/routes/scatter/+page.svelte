@@ -41,7 +41,6 @@
         };
     }
 
-    // Parse file data
     function parseFileData() {
         if (!fileData) return;
         const fileString = atob(fileData.split(",")[1]);
@@ -55,18 +54,15 @@
                     .map((line) => JSON.parse(line));
             } else if (ext === "csv") {
                 let keys = [];
-                let rows = fileString
-                    .split("\n")
-                    .filter((row) => row.trim() !== "");
+                let rows = parseCSV(fileString);
                 if (rows.length > 0) {
-                    keys = parseCSVLine(rows[0]);
+                    keys = rows[0];
                 }
                 parsedData = rows.slice(1).map((line) => {
-                    let values = parseCSVLine(line);
                     let obj = {};
                     keys.forEach((key, i) => {
-                        obj[key] = values[i]
-                            ? values[i].replace(/^"(.*)"$/, "$1")
+                        obj[key] = line[i]
+                            ? line[i].replace(/^"(.*)"$/, "$1")
                             : "";
                     });
                     return obj;
@@ -75,15 +71,46 @@
         }
     }
 
-    // Helpers
-    function parseCSVLine(line) {
-        const regex = /(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|([^,]+))(?=\s*,|\s*$)/g;
-        let result = [];
+    function parseCSV(fileString) {
+        let rows = [];
+        let regex = /(?:"([^"]*(?:""[^"]*)*)"|([^",\s]+)|)(?=\s*,|\s*$)/g;
+        let currentRow = [];
         let match;
-        while ((match = regex.exec(line))) {
-            result.push(match[1] ? match[1].replace(/""/g, '"') : match[2]);
+        let insideQuotes = false;
+        let buffer = "";
+
+        for (let i = 0; i < fileString.length; i++) {
+            let char = fileString[i];
+
+            if (insideQuotes) {
+                if (char === '"' && fileString[i + 1] === '"') {
+                    buffer += '"';
+                    i++;
+                } else if (char === '"') {
+                    insideQuotes = false;
+                } else {
+                    buffer += char;
+                }
+            } else {
+                if (char === '"') {
+                    insideQuotes = true;
+                } else if (char === ",") {
+                    currentRow.push(buffer.trim());
+                    buffer = "";
+                } else if (char === "\n" || i === fileString.length - 1) {
+                    if (i === fileString.length - 1) {
+                        buffer += char;
+                    }
+                    currentRow.push(buffer.trim());
+                    rows.push(currentRow);
+                    currentRow = [];
+                    buffer = "";
+                } else {
+                    buffer += char;
+                }
+            }
         }
-        return result;
+        return rows;
     }
 
     function clear() {
