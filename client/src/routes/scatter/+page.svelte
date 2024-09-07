@@ -353,6 +353,7 @@
                                 {#each Object.keys(previewData[0]) as field}
                                     <ListBoxItem
                                         name="medium"
+                                        class="truncate"
                                         on:click={() => {
                                             selectedEmbeddingField = field;
                                         }}
@@ -390,6 +391,7 @@
                                 {#each Object.keys(previewData[0]) as field}
                                     <ListBoxItem
                                         name="medium"
+                                        class="truncate"
                                         on:click={() => {
                                             selectedCategoryField = field;
                                         }}
