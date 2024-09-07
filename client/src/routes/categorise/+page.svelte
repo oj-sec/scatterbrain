@@ -8,6 +8,7 @@
         popup,
         getToastStore,
     } from "@skeletonlabs/skeleton";
+    import { parseCSV } from "$lib/parsers.js";
 
     // Variables
     let files = null;
@@ -39,7 +40,7 @@
         let file = e.target.files[0];
         console.log("file", file);
         let reader = new FileReader();
-        reader.readAsDataURL(file);
+        reader.readAsText(file, "UTF-8");
         reader.onload = () => {
             fileData = reader.result;
         };
@@ -50,7 +51,7 @@
         categoryFiles = e.target.files;
         console.log("file", file);
         let reader = new FileReader();
-        reader.readAsDataURL(file);
+        reader.readAsText(file, "UTF-8");
         reader.onload = () => {
             categoryFileData = reader.result;
         };
@@ -59,32 +60,27 @@
     // Parse file data
     function parseFileData() {
         if (!fileData) return;
-        const fileString = atob(fileData.split(",")[1]);
+        //const fileString = atob(fileData.split(",")[1]);
+        const fileString = fileData;
         if (files) {
             let ext = files[0].name.split(".").pop();
             if (ext === "json") {
                 parsedData = JSON.parse(fileString);
-                detectedFileType = "json";
             } else if (ext === "ndjson") {
                 parsedData = fileString
                     .split("\n")
                     .map((line) => JSON.parse(line));
-                detectedFileType = "ndjson";
             } else if (ext === "csv") {
-                detectedFileType = "csv";
                 let keys = [];
-                let rows = fileString
-                    .split("\n")
-                    .filter((row) => row.trim() !== "");
+                let rows = parseCSV(fileString);
                 if (rows.length > 0) {
-                    keys = parseCSVLine(rows[0]);
+                    keys = rows[0];
                 }
                 parsedData = rows.slice(1).map((line) => {
-                    let values = parseCSVLine(line);
                     let obj = {};
                     keys.forEach((key, i) => {
-                        obj[key] = values[i]
-                            ? values[i].replace(/^"(.*)"$/, "$1")
+                        obj[key] = line[i]
+                            ? line[i].replace(/^"(.*)"$/, "$1")
                             : "";
                     });
                     return obj;
@@ -95,7 +91,8 @@
 
     function parseCategoryFileData() {
         if (!categoryFileData) return;
-        const fileString = atob(categoryFileData.split(",")[1]);
+        //const fileString = atob(categoryFileData.split(",")[1]);
+        const fileString = categoryFileData;
         parsedCategoryData = fileString
             .split("\n")
             .filter((row) => row.trim() !== "");
@@ -103,16 +100,6 @@
     }
 
     // Helpers
-    function parseCSVLine(line) {
-        const regex = /(?:\"([^\"]*(?:\"\"[^\"]*)*)\"|([^,]+))(?=\s*,|\s*$)/g;
-        let result = [];
-        let match;
-        while ((match = regex.exec(line))) {
-            result.push(match[1] ? match[1].replace(/""/g, '"') : match[2]);
-        }
-        return result;
-    }
-
     function clear() {
         files = null;
         fileData = "";
@@ -227,7 +214,7 @@
     function escapeCsvValue(value) {
         if (typeof value === "string") {
             if (value.includes('"')) {
-                value = value.replace(/"/g, '""')
+                value = value.replace(/"/g, '""');
             }
             if (
                 value.includes(",") ||

@@ -8,6 +8,7 @@
         popup,
         getToastStore,
     } from "@skeletonlabs/skeleton";
+    import { parseCSV } from "$lib/parsers.js";
 
     // Variables
     let files = null;
@@ -35,7 +36,7 @@
         let file = e.target.files[0];
         console.log("file", file);
         let reader = new FileReader();
-        reader.readAsDataURL(file);
+        reader.readAsText(file, "UTF-8");
         reader.onload = () => {
             fileData = reader.result;
         };
@@ -43,7 +44,8 @@
 
     function parseFileData() {
         if (!fileData) return;
-        const fileString = atob(fileData.split(",")[1]);
+        //const fileString = atob(fileData.split(",")[1]);
+        const fileString = fileData;
         if (files) {
             let ext = files[0].name.split(".").pop();
             if (ext === "json") {
@@ -69,48 +71,6 @@
                 });
             }
         }
-    }
-
-    function parseCSV(fileString) {
-        let rows = [];
-        let regex = /(?:"([^"]*(?:""[^"]*)*)"|([^",\s]+)|)(?=\s*,|\s*$)/g;
-        let currentRow = [];
-        let match;
-        let insideQuotes = false;
-        let buffer = "";
-
-        for (let i = 0; i < fileString.length; i++) {
-            let char = fileString[i];
-
-            if (insideQuotes) {
-                if (char === '"' && fileString[i + 1] === '"') {
-                    buffer += '"';
-                    i++;
-                } else if (char === '"') {
-                    insideQuotes = false;
-                } else {
-                    buffer += char;
-                }
-            } else {
-                if (char === '"') {
-                    insideQuotes = true;
-                } else if (char === ",") {
-                    currentRow.push(buffer.trim());
-                    buffer = "";
-                } else if (char === "\n" || i === fileString.length - 1) {
-                    if (i === fileString.length - 1) {
-                        buffer += char;
-                    }
-                    currentRow.push(buffer.trim());
-                    rows.push(currentRow);
-                    currentRow = [];
-                    buffer = "";
-                } else {
-                    buffer += char;
-                }
-            }
-        }
-        return rows;
     }
 
     function clear() {
