@@ -22,7 +22,7 @@ If you have a request, please get in touch or open an issue!
 
 # Installation & usage
 
-Scatterbrain is most easily run using docker. With docker installed, from this directory, run `docker image build -t scatterbrain .` to build and then `docker run -p 8000:8000 scatterbrain` to serve the application. Access the application with a web browser on `http://localhost:8000`.
+Scatterbrain is most easily run using docker. With docker installed, from this directory, run `docker image build -t scatterbrain .` to build and then `docker run -p 8000:8000 scatterbrain` to serve the application. Access the application with a web browser on `http://localhost:8000`. A prebuilt docker image is also available from the docker hub and can be run with `docker run -p 8000:8000 0jsec/scatterbrain:latest`.
 
 You can alternatively compile the application and serve it directly. Create the Svelte static web application files by running `npm install` and `npm run build` in the `./client` directory (requires npm). Run the fastAPI server by running `pip install -r requirements.txt` and `python3 server.py` in the `./server` directory (requires python3.10+ and pip).
 

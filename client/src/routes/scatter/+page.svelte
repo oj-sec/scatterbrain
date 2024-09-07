@@ -23,6 +23,7 @@
     let selectedColourScheme = "mako";
     let progress = 0;
     let completed = false;
+    let plotted = false;
     let progressMessage = "";
     let plotHTML = "";
     const toastStore = getToastStore();
@@ -161,6 +162,12 @@
             }),
         });
 
+        completed = true;
+        progressMessage = "Embeddings generated";
+    }
+
+    async function generatePlot() {
+        plotted = false;
         progressMessage = "Generating plot";
         const plotResponse = await fetch("/api/plot", {
             method: "POST",
@@ -185,8 +192,8 @@
         } else {
             progressMessage = "Completed";
             plotHTML = plotResponseData.plot;
-            completed = true;
         }
+        plotted = true;
     }
 
     function onCompleteHandler() {
@@ -326,7 +333,9 @@
                 </div>
             </Step>
             <Step locked={!selectedEmbeddingField}>
-                <svelte:fragment slot="header">Configure</svelte:fragment>
+                <svelte:fragment slot="header"
+                    >Configure embeddings</svelte:fragment
+                >
                 <div class="min-h-[450px] min-w-[800px]">
                     <div class="grid grid-cols-2 gap-4">
                         <label class="label">
@@ -363,6 +372,67 @@
                                 {/each}
                             </ListBox>
                         </div>
+                        <label class="label">
+                            <span class="ml-2">Embedding model</span>
+                            <input
+                                type="text"
+                                class="input rounded-full m-2"
+                                placeholder="Embedding model"
+                                bind:value={embeddingModel}
+                            />
+                        </label>
+                        <label class="label">
+                            <span class="ml-2">Dimension reduction</span>
+                            <select
+                                class="select rounded-full m-2"
+                                bind:value={selectedDimensionReduction}
+                            >
+                                <option value="PaCMAP">PaCMAP</option>
+                            </select>
+                        </label>
+                        <label class="label">
+                            <span class="ml-2">Output dimensions</span>
+                            <select
+                                class="select rounded-full m-2"
+                                bind:value={selectedOutputDimensions}
+                            >
+                                <option value="2"> 2</option>
+                                <option value="3"> 3</option>
+                            </select>
+                        </label>
+                    </div>
+                </div></Step
+            >
+            <Step locked={!completed}>
+                <svelte:fragment slot="header"
+                    >Generate embeddings</svelte:fragment
+                >
+                <div
+                    class="min-h-[450px] min-w-[800px] flex flex-col items-center justify-center"
+                >
+                    <progress
+                        class="m-4"
+                        value={progress}
+                        max={parsedData.length}
+                    />
+                    {#if progressMessage}
+                        <i class="text-center">
+                            {progressMessage}
+                        </i>
+                    {/if}
+                    <button
+                        class="btn variant-filled mt-4"
+                        disabled={progress === parsedData.length}
+                        on:click={generateEmbeddings}
+                    >
+                        Generate embeddings
+                    </button>
+                </div>
+            </Step>
+            <Step locked={!plotted}>
+                <svelte:fragment slot="header">Configure graph</svelte:fragment>
+                <div class="min-h-[450px] min-w-[800px]">
+                    <div class="grid grid-cols-2 gap-4">
                         <label class="label">
                             <span class="ml-2"
                                 >Category field <i class="text-gray-600 m-1"
@@ -401,34 +471,7 @@
                                 {/each}
                             </ListBox>
                         </div>
-                        <label class="label">
-                            <span class="ml-2">Embedding model</span>
-                            <input
-                                type="text"
-                                class="input rounded-full m-2"
-                                placeholder="Embedding model"
-                                bind:value={embeddingModel}
-                            />
-                        </label>
-                        <label class="label">
-                            <span class="ml-2">Dimension reduction</span>
-                            <select
-                                class="select rounded-full m-2"
-                                bind:value={selectedDimensionReduction}
-                            >
-                                <option value="PaCMAP">PaCMAP</option>
-                            </select>
-                        </label>
-                        <label class="label">
-                            <span class="ml-2">Output dimensions</span>
-                            <select
-                                class="select rounded-full m-2"
-                                bind:value={selectedOutputDimensions}
-                            >
-                                <option value="2"> 2</option>
-                                <option value="3"> 3</option>
-                            </select>
-                        </label>
+
                         <label class="label">
                             <span class="ml-2">Colour scheme</span>
                             <select
@@ -442,35 +485,20 @@
                                 <option value="viridis">🟢 viridis</option>
                             </select>
                         </label>
+
+                        <div
+                            class="col-span-2 min-full flex flex-col items-center justify-center"
+                        >
+                            <button
+                                class="btn variant-filled mt-4"
+                                on:click={generatePlot}
+                            >
+                                Generate plot
+                            </button>
+                        </div>
                     </div>
                 </div></Step
             >
-            <Step locked={!completed}>
-                <svelte:fragment slot="header"
-                    >Generate embeddings</svelte:fragment
-                >
-                <div
-                    class="min-h-[450px] min-w-[800px] flex flex-col items-center justify-center"
-                >
-                    <progress
-                        class="m-4"
-                        value={progress}
-                        max={parsedData.length}
-                    />
-                    {#if progressMessage}
-                        <i class="text-center">
-                            {progressMessage}
-                        </i>
-                    {/if}
-                    <button
-                        class="btn variant-filled mt-4"
-                        disabled={progress === parsedData.length}
-                        on:click={generateEmbeddings}
-                    >
-                        Generate embeddings
-                    </button>
-                </div>
-            </Step>
         </Stepper>
     </div>
 </div>
