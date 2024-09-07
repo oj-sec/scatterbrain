@@ -65,12 +65,15 @@
         if (files) {
             let ext = files[0].name.split(".").pop();
             if (ext === "json") {
+                detectedFileType = "json";
                 parsedData = JSON.parse(fileString);
             } else if (ext === "ndjson") {
+                detectedFileType = "ndjson";
                 parsedData = fileString
                     .split("\n")
                     .map((line) => JSON.parse(line));
             } else if (ext === "csv") {
+                detectedFileType = "csv";
                 let keys = [];
                 let rows = parseCSV(fileString);
                 if (rows.length > 0) {
@@ -228,8 +231,8 @@
     }
 
     function onCompleteHandler() {
+        console.log("completed");
         let data = processData(parsedData);
-
         if (detectedFileType === "json") {
             let json = JSON.stringify(data, null, 2);
             createDownloadLink(json, "application/json", "categorised.json");
@@ -251,6 +254,8 @@
                     )
                     .join("\n");
             createDownloadLink(csv, "text/csv", "categorised.csv");
+        } else {
+            console.log("Unknown file type");
         }
     }
 
@@ -404,6 +409,10 @@
                                             >
                                                 Parsed a total of {parsedData.length}
                                                 rows
+                                                {#if parsedCategoryData.length > 0}
+                                                    and {parsedCategoryData.length}
+                                                    categories
+                                                {/if}
                                             </td>
                                         </tr>
                                     </tfoot>
