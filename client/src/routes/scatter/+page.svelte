@@ -8,6 +8,7 @@
         popup,
         getToastStore,
     } from "@skeletonlabs/skeleton";
+    import { parseCSV } from "$lib/parsers.js";
 
     // Variables
     let files = null;
@@ -18,10 +19,12 @@
     let selectedCategoryField = "";
     let embeddingModel = "mixedbread-ai/mxbai-embed-large-v1";
     let selectedDimensionReduction = "PaCMAP";
+    let selectedOverflowStrategy = "average";
     let selectedOutputDimensions = "2";
     let selectedColourScheme = "mako";
     let progress = 0;
     let completed = false;
+    let plotted = false;
     let progressMessage = "";
     let plotHTML = "";
     const toastStore = getToastStore();
@@ -35,7 +38,7 @@
         let file = e.target.files[0];
         console.log("file", file);
         let reader = new FileReader();
-        reader.readAsDataURL(file);
+        reader.readAsText(file, "UTF-8");
         reader.onload = () => {
             fileData = reader.result;
         };
@@ -43,7 +46,8 @@
 
     function parseFileData() {
         if (!fileData) return;
-        const fileString = atob(fileData.split(",")[1]);
+        //const fileString = atob(fileData.split(",")[1]);
+        const fileString = fileData;
         if (files) {
             let ext = files[0].name.split(".").pop();
             if (ext === "json") {
@@ -69,48 +73,6 @@
                 });
             }
         }
-    }
-
-    function parseCSV(fileString) {
-        let rows = [];
-        let regex = /(?:"([^"]*(?:""[^"]*)*)"|([^",\s]+)|)(?=\s*,|\s*$)/g;
-        let currentRow = [];
-        let match;
-        let insideQuotes = false;
-        let buffer = "";
-
-        for (let i = 0; i < fileString.length; i++) {
-            let char = fileString[i];
-
-            if (insideQuotes) {
-                if (char === '"' && fileString[i + 1] === '"') {
-                    buffer += '"';
-                    i++;
-                } else if (char === '"') {
-                    insideQuotes = false;
-                } else {
-                    buffer += char;
-                }
-            } else {
-                if (char === '"') {
-                    insideQuotes = true;
-                } else if (char === ",") {
-                    currentRow.push(buffer.trim());
-                    buffer = "";
-                } else if (char === "\n" || i === fileString.length - 1) {
-                    if (i === fileString.length - 1) {
-                        buffer += char;
-                    }
-                    currentRow.push(buffer.trim());
-                    rows.push(currentRow);
-                    currentRow = [];
-                    buffer = "";
-                } else {
-                    buffer += char;
-                }
-            }
-        }
-        return rows;
     }
 
     function clear() {
@@ -172,6 +134,7 @@
                 body: JSON.stringify({
                     row: row,
                     field: selectedEmbeddingField,
+                    overflow: selectedOverflowStrategy,
                 }),
             });
             const embedResponseData = await embedResponse.json();
@@ -201,6 +164,12 @@
             }),
         });
 
+        completed = true;
+        progressMessage = "Embeddings generated";
+    }
+
+    async function generatePlot() {
+        plotted = false;
         progressMessage = "Generating plot";
         const plotResponse = await fetch("/api/plot", {
             method: "POST",
@@ -225,8 +194,8 @@
         } else {
             progressMessage = "Completed";
             plotHTML = plotResponseData.plot;
-            completed = true;
         }
+        plotted = true;
     }
 
     function onCompleteHandler() {
@@ -366,7 +335,9 @@
                 </div>
             </Step>
             <Step locked={!selectedEmbeddingField}>
-                <svelte:fragment slot="header">Configure</svelte:fragment>
+                <svelte:fragment slot="header"
+                    >Configure embeddings</svelte:fragment
+                >
                 <div class="min-h-[450px] min-w-[800px]">
                     <div class="grid grid-cols-2 gap-4">
                         <label class="label">
@@ -376,9 +347,12 @@
                                 class="btn m-2 variant-filled justify-between w-full"
                                 use:popup={popupCombobox}
                             >
-                                {selectedEmbeddingField
-                                    ? selectedEmbeddingField
-                                    : "Embedding field"}
+                                {selectedEmbeddingField &&
+                                selectedEmbeddingField.length > 23
+                                    ? selectedEmbeddingField.substring(0, 20) +
+                                      "..."
+                                    : selectedEmbeddingField ||
+                                      "Embedding field"}
                                 <i class="fa-solid fa-caret-down"></i>
                             </button>
                         </label>
@@ -393,45 +367,9 @@
                                 {#each Object.keys(previewData[0]) as field}
                                     <ListBoxItem
                                         name="medium"
+                                        class="truncate"
                                         on:click={() => {
                                             selectedEmbeddingField = field;
-                                        }}
-                                    >
-                                        {field}
-                                    </ListBoxItem>
-                                {/each}
-                            </ListBox>
-                        </div>
-                        <label class="label">
-                            <span class="ml-2"
-                                >Category field <i class="text-gray-600 m-1"
-                                    >(Optional)</i
-                                ></span
-                            >
-                            <button
-                                type="button"
-                                class="btn m-2 variant-ghost justify-between w-full"
-                                use:popup={popupCombobox1}
-                            >
-                                {selectedCategoryField
-                                    ? selectedCategoryField
-                                    : "Category field"}
-                                <i class="fa-solid fa-caret-down"></i>
-                            </button>
-                        </label>
-                        <div
-                            class="card w-48 shadow-xl py-2 z-50"
-                            data-popup="popupCombobox1"
-                        >
-                            <ListBox
-                                rounded="rounded-none"
-                                active="variant-ghost"
-                            >
-                                {#each Object.keys(previewData[0]) as field}
-                                    <ListBoxItem
-                                        name="medium"
-                                        on:click={() => {
-                                            selectedCategoryField = field;
                                         }}
                                     >
                                         {field}
@@ -447,6 +385,16 @@
                                 placeholder="Embedding model"
                                 bind:value={embeddingModel}
                             />
+                        </label>
+                        <label class="label">
+                            <span class="ml-2">Overflow strategy</span>
+                            <select
+                                class="select rounded-full m-2"
+                                bind:value={selectedOverflowStrategy}
+                            >
+                                <option value="average"> average</option>
+                                <option value="truncate"> truncate</option>
+                            </select>
                         </label>
                         <label class="label">
                             <span class="ml-2">Dimension reduction</span>
@@ -465,19 +413,6 @@
                             >
                                 <option value="2"> 2</option>
                                 <option value="3"> 3</option>
-                            </select>
-                        </label>
-                        <label class="label">
-                            <span class="ml-2">Colour scheme</span>
-                            <select
-                                class="select rounded-full m-2"
-                                bind:value={selectedColourScheme}
-                            >
-                                <option value="mako">🔵 mako</option>
-                                <option value="rocket">🔴 rocket</option>
-                                <option value="flare">🟣 flare</option>
-                                <option value="magma">🟠 magma</option>
-                                <option value="viridis">🟢 viridis</option>
                             </select>
                         </label>
                     </div>
@@ -509,6 +444,76 @@
                     </button>
                 </div>
             </Step>
+            <Step locked={!plotted}>
+                <svelte:fragment slot="header">Configure graph</svelte:fragment>
+                <div class="min-h-[450px] min-w-[800px]">
+                    <div class="grid grid-cols-2 gap-4">
+                        <label class="label">
+                            <span class="ml-2"
+                                >Category field <i class="text-gray-600 m-1"
+                                    >(Optional)</i
+                                ></span
+                            >
+                            <button
+                                type="button"
+                                class="btn m-2 variant-ghost justify-between w-full"
+                                use:popup={popupCombobox1}
+                            >
+                                {selectedCategoryField
+                                    ? selectedCategoryField
+                                    : "Category field"}
+                                <i class="fa-solid fa-caret-down"></i>
+                            </button>
+                        </label>
+                        <div
+                            class="card w-48 shadow-xl py-2 z-50"
+                            data-popup="popupCombobox1"
+                        >
+                            <ListBox
+                                rounded="rounded-none"
+                                active="variant-ghost"
+                            >
+                                {#each Object.keys(previewData[0]) as field}
+                                    <ListBoxItem
+                                        name="medium"
+                                        class="truncate"
+                                        on:click={() => {
+                                            selectedCategoryField = field;
+                                        }}
+                                    >
+                                        {field}
+                                    </ListBoxItem>
+                                {/each}
+                            </ListBox>
+                        </div>
+
+                        <label class="label">
+                            <span class="ml-2">Colour scheme</span>
+                            <select
+                                class="select rounded-full m-2"
+                                bind:value={selectedColourScheme}
+                            >
+                                <option value="mako">🔵 mako</option>
+                                <option value="rocket">🔴 rocket</option>
+                                <option value="flare">🟣 flare</option>
+                                <option value="magma">🟠 magma</option>
+                                <option value="viridis">🟢 viridis</option>
+                            </select>
+                        </label>
+
+                        <div
+                            class="col-span-2 min-full flex flex-col items-center justify-center"
+                        >
+                            <button
+                                class="btn variant-filled mt-4"
+                                on:click={generatePlot}
+                            >
+                                Generate plot
+                            </button>
+                        </div>
+                    </div>
+                </div></Step
+            >
         </Stepper>
     </div>
 </div>

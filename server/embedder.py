@@ -5,6 +5,7 @@ Module to generate text embeddings using a SetenceTransformer model.
 import logging
 
 import matplotlib.colors as mcolors
+import numpy as np
 import pandas as pd
 import plotly.graph_objects as go
 import seaborn as sns
@@ -89,27 +90,71 @@ class Embedder:
         logging.info("Embedder model loaded.")
         return
 
-    def embed_text(self, row, field):
+    def embed_text(self, row, field, overflow="truncate"):
         """
         Method to generate embeddings for a given text.
 
         Args:
             row (dict): A dictionary containing the data row.
             field (str): The field in the dictionary containing the text.
+            overflow (str): The method to handle text overflow.
 
         Returns:
             list[float]: The embeddings of the text.
         """
         logging.info("Embedder embedding text.")
-        try:
-            embeddings = self.model.encode(row[field])
-        except Exception as e:
-            logging.error("Embedder failed to embed text. %s", e)
-            raise e
+        if overflow == "average":
+            texts = self.__chunk_text(row[field])
+        else:
+            texts = [row[field]]
+        with open("data.txt", "a") as f:
+            f.write(str(texts) + "\n")
+        embedding_list = []
+        for text in texts:
+            try:
+                embedding_list.append(self.model.encode(text))
+            except Exception as e:
+                logging.error("Embedder failed to embed text. %s", e)
+                raise e
+        if len(embedding_list) > 1:
+            embeddings = np.mean(embedding_list, axis=0)
+        else:
+            embeddings = embedding_list[0]
         self.embeddings.append(embeddings)
         self.data.append(row)
         logging.info("Embedder text embedded.")
         return embeddings
+
+    def __chunk_text(self, text, token_length=512, overlap_tokens=20):
+        """
+        Private method to split a text into chunks of a given token length.
+
+        Args:
+            text (str): The text to split.
+            token_length (int): The maximum token length for each chunk.
+            overlap_tokens (int): The number of overlapping tokens between chunks.
+
+        Returns:
+            list[str]: The split text chunks.
+        """
+        logging.info("Embedder splitting text.")
+        tokens = self.model.tokenizer(
+            text, return_tensors="pt", truncation=False, padding=False
+        )
+        if len(tokens["input_ids"][0]) <= token_length:
+            return [text]
+        input_ids = tokens["input_ids"][0]
+        chunks = []
+        for i in range(0, len(input_ids), token_length - overlap_tokens):
+            chunk_ids = input_ids[i : i + token_length]
+            chunk_text = self.model.tokenizer.decode(
+                chunk_ids, skip_special_tokens=True
+            )
+            chunks.append(chunk_text)
+        logging.info("Embedder text split into %d chunks.", len(chunks))
+        for chunk in chunks:
+            logging.info("Chunk: %s", chunk)
+        return chunks
 
     def embed_comparison_text(self, text):
         """
