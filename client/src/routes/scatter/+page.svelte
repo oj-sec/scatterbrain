@@ -19,6 +19,7 @@
     let selectedCategoryField = "";
     let embeddingModel = "mixedbread-ai/mxbai-embed-large-v1";
     let selectedDimensionReduction = "PaCMAP";
+    let selectedOverflowStrategy = "average";
     let selectedOutputDimensions = "2";
     let selectedColourScheme = "mako";
     let progress = 0;
@@ -133,6 +134,7 @@
                 body: JSON.stringify({
                     row: row,
                     field: selectedEmbeddingField,
+                    overflow: selectedOverflowStrategy,
                 }),
             });
             const embedResponseData = await embedResponse.json();
@@ -345,9 +347,12 @@
                                 class="btn m-2 variant-filled justify-between w-full"
                                 use:popup={popupCombobox}
                             >
-                                {selectedEmbeddingField
-                                    ? selectedEmbeddingField
-                                    : "Embedding field"}
+                                {selectedEmbeddingField &&
+                                selectedEmbeddingField.length > 23
+                                    ? selectedEmbeddingField.substring(0, 20) +
+                                      "..."
+                                    : selectedEmbeddingField ||
+                                      "Embedding field"}
                                 <i class="fa-solid fa-caret-down"></i>
                             </button>
                         </label>
@@ -380,6 +385,16 @@
                                 placeholder="Embedding model"
                                 bind:value={embeddingModel}
                             />
+                        </label>
+                        <label class="label">
+                            <span class="ml-2">Overflow strategy</span>
+                            <select
+                                class="select rounded-full m-2"
+                                bind:value={selectedOverflowStrategy}
+                            >
+                                <option value="average"> average</option>
+                                <option value="truncate"> truncate</option>
+                            </select>
                         </label>
                         <label class="label">
                             <span class="ml-2">Dimension reduction</span>
